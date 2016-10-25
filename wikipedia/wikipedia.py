@@ -9,6 +9,7 @@ from decimal import Decimal
 from .exceptions import (
   PageError, DisambiguationError, RedirectError, HTTPTimeoutError,
   WikipediaException, ODD_ERROR_MESSAGE)
+from .templates_parser import TemplateParser
 from .util import cache, stdout_encode, debug
 import re
 
@@ -455,6 +456,48 @@ class WikipediaPage(object):
       self._html = request['query']['pages'][self.pageid]['revisions'][0]['*']
 
     return self._html
+
+  #todo add tests and contribute
+  def infobox(self):
+    '''
+
+    Get page infobox.
+
+    returns empty dict for absent infobox
+    '''
+
+    if not getattr(self, '_infobox', False):
+      query_params = {
+        'prop': 'revisions',
+        'rvprop': 'content',
+        'rvlimit': 1,
+        'titles': self.title,
+        'rvsection': 0
+      }
+
+      request = _wiki_request(query_params)
+      content = request['query']['pages'][self.pageid]['revisions'][0]['*']
+      infobox = {}
+      box_parser = TemplateParser(content)
+      for box in box_parser.get_templates():
+        if box.startswith('{{Infobox'):
+          infobox_text = box
+          for line in infobox_text.splitlines()[1:]:
+            if line.startswith("}}"):
+              break
+            try:
+              key = line[1:line.index("=")]
+            except ValueError:
+              # ignore strings w/o '='
+              pass
+            else:
+              value = line[2+len(key):]
+              key = key.strip()
+              value = value.strip()
+              infobox[key] = value
+      self._infobox = infobox
+
+    return self._infobox
 
   @property
   def content(self):

@@ -482,16 +482,18 @@ class WikipediaPage(object):
       for box in box_parser.get_templates():
         if box.startswith('{{Infobox'):
           infobox_text = box
-          for line in infobox_text.splitlines()[1:]:
+          infobox_parameters = (' '.join(infobox_text.splitlines())).split('|')
+          for line in infobox_parameters[1:]:
+            line = line.strip()
             if line.startswith("}}"):
               break
             try:
-              key = line[1:line.index("=")]
+              key = line[:line.index("=")]
             except ValueError:
-              # ignore strings w/o '='
+              # ignore strings w/o '=' (parameter-value-separator)
               pass
             else:
-              value = line[2+len(key):]
+              value = line[1+len(key):]
               key = key.strip()
               value = value.strip()
               infobox[key] = value
